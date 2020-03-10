@@ -88,6 +88,8 @@ Role Variables
     default: 8
   - `sonar_minor_version` - minor number of SonarQube version\
     default: 2.0.32929
+  - `sonar_edition` - edition of SonarQube\
+    default: community
   - `sonar_path` - installation directory\
     default: /opt/sonarqube
   - `sonar_user` - user for installing SonarQube\
