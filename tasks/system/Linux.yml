@@ -80,7 +80,7 @@
     when:
       - not sonar_verify_download
 
-  - name: 'Install SonarQube  {{ sonar_edition }} {{ sonar_major_version }}.{{ sonar_minor_version }}'
+  - name: 'Install SonarQube {{ sonar_edition }} {{ sonar_major_version }}.{{ sonar_minor_version }}'
     unarchive:
       src: '{{ sonar_download_path }}/sonarqube-{{ sonar_edition }}-{{ sonar_major_version }}.{{ sonar_minor_version }}.zip'
       exclude: "{{ sonar_all_excluded_plugins }} + \
