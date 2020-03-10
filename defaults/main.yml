@@ -50,6 +50,9 @@ sonar_db:
 # sonarqube artifact provider
 sonar_store: https://binaries.sonarsource.com/Distribution/sonarqube
 
+# download checksum before
+sonar_verify_download: true
+
 # Need to use http for self-signed certificates
 sonar_check_url: http://{{ web.host }}:{{ web.port }}
 sonar_installation: '{{ sonar_path }}/sonarqube-{{ sonar_major_version }}.{{ sonar_minor_version }}'

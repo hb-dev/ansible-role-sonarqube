@@ -48,6 +48,8 @@
       url: '{{ sonar_store }}/sonarqube-{{ sonar_major_version }}.{{ sonar_minor_version }}.zip.sha'
       return_content: true
     register: sonarqube_checksum
+    when:
+      - sonar_verify_download | bool
 
   - name: 'Download SonarQube {{ sonar_major_version }}.{{ sonar_minor_version }}'
     get_url:
@@ -61,6 +63,22 @@
     until: download_distrib_result is succeeded
     retries: 3
     delay: 5
+    when:
+      - sonar_verify_download | bool
+
+  - name: 'Download SonarQube {{ sonar_major_version }}.{{ sonar_minor_version }} without integrity validation'
+    get_url:
+      url: '{{ sonar_store }}/sonarqube-{{ sonar_major_version }}.{{ sonar_minor_version }}.zip'
+      dest: '{{ sonar_download_path }}/'
+      mode: 0644
+      owner: '{{ sonar_user }}'
+      group: '{{ sonar_group }}'
+    register: download_distrib_result
+    until: download_distrib_result is succeeded
+    retries: 3
+    delay: 5
+    when:
+      - not sonar_verify_download
 
   - name: 'Install SonarQube {{ sonar_major_version }}.{{ sonar_minor_version }}'
     unarchive:

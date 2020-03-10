@@ -137,6 +137,8 @@ Role Variables
     default: https://sonarsource.bintray.com/Distribution/sonarqube
   - `sonar_download_path` - local download path\
     default: /tmp/
+  - `sonar_verify_download` - verify integrity of downloaded archive\
+    default: true
   - `sonar_proxy_type` - web server, nginx is only supported for now\
     default: nginx
   - `sonar_proxy_server_name` - server name in webserver config\
