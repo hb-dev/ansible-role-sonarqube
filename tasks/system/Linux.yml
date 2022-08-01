@@ -28,6 +28,7 @@
     file:
       path: '{{ sonar_path }}'
       state: directory
+      mode: 0755
       owner: '{{ sonar_user }}'
       group: '{{ sonar_group }}'
 
@@ -43,17 +44,20 @@
     delay: 5
     notify: Restart Sonarqube
 
-  - name: 'Download SonarQube {{ sonar_major_version }}.{{ sonar_minor_version }} checksum'
+  - name: 'Download SonarQube {{ sonar_version }} checksum'
     uri:
-      url: '{{ sonar_store }}/sonarqube-{{ sonar_major_version }}.{{ sonar_minor_version }}.zip.sha'
+      url: '{{ sonar_store }}/sonarqube-{{ sonar_version }}.zip.sha'
       return_content: true
     register: sonarqube_checksum
     when:
-      - sonar_verify_download | bool
+      - sonar_version is version("8.3", "<")
+      - sonar_version is not version("7.9.4", "==")
+      - sonar_version is not version("7.9.5", "==")
+      - sonar_version is not version("7.9.6", "==")
 
-  - name: 'Download SonarQube {{ sonar_major_version }}.{{ sonar_minor_version }}'
+  - name: 'Download SonarQube {{ sonar_version }} with check'
     get_url:
-      url: '{{ sonar_store }}/sonarqube-{{ sonar_major_version }}.{{ sonar_minor_version }}.zip'
+      url: '{{ sonar_store }}/sonarqube-{{ sonar_version }}.zip'
       dest: '{{ sonar_download_path }}/'
       mode: 0644
       owner: '{{ sonar_user }}'
@@ -64,11 +68,15 @@
     retries: 3
     delay: 5
     when:
-      - sonar_verify_download | bool
+      - sonar_version is version("8.3", "<")
+      - sonar_version is not version("7.9.4", "==")
+      - sonar_version is not version("7.9.5", "==")
+      - sonar_version is not version("7.9.6", "==")
+      - sonar_download
 
-  - name: 'Download SonarQube {{ sonar_edition }} {{ sonar_major_version }}.{{ sonar_minor_version }} without integrity validation'
+  - name: 'Download SonarQube {{ sonar_version }} without check'
     get_url:
-      url: '{{ sonar_store }}/sonarqube-{{ sonar_edition }}-{{ sonar_major_version }}.{{ sonar_minor_version }}.zip'
+      url: '{{ sonar_store }}/sonarqube-{{ sonar_version }}.zip'
       dest: '{{ sonar_download_path }}/'
       mode: 0644
       owner: '{{ sonar_user }}'
@@ -78,14 +86,18 @@
     retries: 3
     delay: 5
     when:
-      - not sonar_verify_download
+      - sonar_version is version("8.3", ">=") or
+        sonar_version is version("7.9.4", "==") or
+        sonar_version is version("7.9.5", "==") or
+        sonar_version is version("7.9.6", "==")
+      - sonar_download
 
-  - name: 'Install SonarQube {{ sonar_edition }} {{ sonar_major_version }}.{{ sonar_minor_version }}'
+  - name: 'Install SonarQube {{ sonar_version }}'
     unarchive:
-      src: '{{ sonar_download_path }}/sonarqube-{{ sonar_edition }}-{{ sonar_major_version }}.{{ sonar_minor_version }}.zip'
+      src: '{{ sonar_download_path }}/sonarqube-{{ sonar_edition }}-{{ sonar_version }}.zip'
       exclude: "{{ sonar_all_excluded_plugins }} + \
-      [ 'sonarqube-{{ sonar_major_version }}.{{ sonar_minor_version }}/conf/sonar.properties', \
-      'sonarqube-{{ sonar_major_version }}.{{ sonar_minor_version }}/temp/README.txt']"
+      [ 'sonarqube-{{ sonar_version }}/conf/sonar.properties', \
+      'sonarqube-{{ sonar_version }}/temp/README.txt']"
       dest: '{{ sonar_path }}'
       owner: '{{ sonar_user }}'
       group: '{{ sonar_group }}'
@@ -122,36 +134,41 @@
   - name: Download plugins
     get_url:
       url: '{{ item }}'
-      dest: '{{ sonar_installation }}/extensions/plugins/'
+      dest: '{{ sonar_plugins_dir }}'
       mode: 0644
       owner: '{{ sonar_user }}'
       group: '{{ sonar_group }}'
-    register: download_plugins_result
-    until: download_plugins_result is succeeded
+    when: '"0.0.0" not in item'
+    register: download_plugin_result
+    until: download_plugin_result is succeeded
     retries: 3
     delay: 5
     notify: Restart Sonarqube
     loop: '{{ sonar_all_plugins }}'
 
-  - name: Get branch plugin url
-    set_fact:
-      branch_plugin_url: "https://github.com/mc1arke/sonarqube-community-branch-plugin/releases/download/\
-                         {{ sonar_branch_plugin_version }}/sonarqube-community-branch-plugin-{{ sonar_branch_plugin_version }}.jar"
-
   - name: Copy branch plugin
     copy:
-      src: '{{ sonar_installation }}/extensions/plugins/sonarqube-community-branch-plugin-{{ sonar_branch_plugin_version }}.jar'
+      src: '{{ sonar_plugins_dir }}/sonarqube-community-branch-plugin-{{ branch_pversion }}.jar'
       dest: '{{ sonar_installation }}/lib/common/'
+      mode: 0644
       remote_src: true
     when:
-      - sonar_branch_plugin_version is version("1.2.0", ">=")
       - branch_plugin_url in sonar_all_plugins
+      - branch_pversion is version("1.2.0", ">=")
+      - branch_pversion is version("1.7.0", "<=")
 
   - meta: flush_handlers
 
   rescue:
+    - name: Show logs
+      command: 'ls {{ sonar_installation }}/logs/'
+      register: logs_list
+
+    - debug:
+        var: logs_list.stdout
+
     - name: Get sonar log
-      command: 'cat {{ sonar_installation }}/logs/sonar.log'
+      command: 'cat {{ sonar_log_path }}'
       register: sonar_log
 
     - debug:
@@ -166,8 +183,40 @@
 
   become: true
 
+- name: Verify login with old password
+  uri:
+    url: '{{ sonar_check_url }}/api/authentication/login'
+    method: POST
+    force_basic_auth: true
+    user: '{{ sonar_web_user }}'
+    password: '{{ sonar_web_old_password }}'
+    body: 'login={{ sonar_web_user }}&password={{ sonar_web_old_password }}'
+    body_format: form-urlencoded
+    validate_certs: false
+    status_code:
+      - 200
+      - 401
+  register: login_result
+  when:
+    - change_password | bool
+
+- name: Update sonar web password
+  uri:
+    url: '{{ sonar_check_url }}/api/users/change_password'
+    method: POST
+    force_basic_auth: true
+    user: '{{ sonar_web_user }}'
+    password: '{{ sonar_web_old_password }}'
+    body: 'login={{ sonar_web_user }}&password={{ sonar_web_password }}&previousPassword={{ sonar_web_old_password }}'
+    body_format: form-urlencoded
+    validate_certs: false
+    status_code: 204
+  when:
+    - change_password | bool
+    - login_result.status == 200
+
 - name: Jenkins webhook block
-  include_tasks: jenkins.yaml
+  include_tasks: jenkins.yml
   when:
     - sonar_set_jenkins_webhook | bool
 
@@ -190,6 +239,7 @@
       copy:
         src: '{{ profile_item }}'
         dest: '{{ sonar_path }}/profiles/'
+        mode: 0644
         owner: '{{ sonar_user }}'
         group: '{{ sonar_group }}'
       loop: '{{ sonar_profile_list }}'
@@ -216,7 +266,7 @@
     - name: Restore profiles
       # have to use curl because of https://github.com/ansible/ansible/issues/38172
       command: >-
-        {{ curl_command }} -k -u {{ sonar_web_user }}:{{ sonar_web_default_password }} -F
+        {{ curl_command }} -k -u {{ sonar_web_user }}:{{ sonar_web_password }} -F
           'backup=@{{ profile_item.path }}' {{ sonar_check_url }}/api/qualityprofiles/restore
       args:
         warn: false

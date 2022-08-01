@@ -1,5 +1,7 @@
 ---
 - src: lean_delivery.java
 - src: anxs.postgresql
+  version: master
 - src: jdauphant.ssl-certs
 - src: nginxinc.nginx
+  version: 0.20.0

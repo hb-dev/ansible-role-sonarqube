@@ -9,6 +9,7 @@ stages:
   - deployment test
 
 before_script:
+  - if [[ ${CI_COMMIT_BRANCH} == dependabot* ]]; then echo 'Skipping test for dependabot branch' && exit 0; fi
   - rm -rf molecule/resources/provisioning
   - ansible --version
   - ansible-lint --version
@@ -29,7 +30,7 @@ Lint:
   after_script:
     - rm -rf ~/ansible-lint-rules
   tags:
-    - aws
+    - lint
 
 Docker sonarqube:
   stage: deployment test
@@ -46,12 +47,3 @@ AWS sonarqube:
     - molecule test -s cloud-aws-direct
   tags:
     - aws
-
-.EPC sonarqube:
-  variables:
-    EPC_REGION: EPAM-BY2
-  stage: deployment test
-  script:
-    - molecule test -s cloud-epc-delegated
-  tags:
-    - delegated
