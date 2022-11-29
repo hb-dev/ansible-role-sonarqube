@@ -1,4 +1,10 @@
 # Web parameters
+{{ "https.proxyHost= %s" % https.proxy_host if https.proxy_host is defined }}
+{{ "https.proxyPort= %s" % https.proxy_port if https.proxy_port is defined }}
+{{ "http.proxyHost= %s" % http.proxy_host if http.proxy_host is defined }}
+{{ "http.proxyPort= %s" % http.proxy_port if http.proxy_port is defined }}
+{{ "https.nonProxyHosts= %s" % https.non_proxy_hosts if https.non_proxy_hosts is defined }}
+
 sonar.web.host={{ web.host }}
 sonar.web.port={{ web.port }}
 sonar.web.context={{ web.path }}

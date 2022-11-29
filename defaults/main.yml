@@ -17,6 +17,14 @@ sonar_java_opts:
   es: -Xms512m -Xmx512m
   ce: -Xmx512m -Xms128m
 
+# http:
+#   proxy_host: 123.45.678.9
+#   proxy_port: 80
+#   non_proxy_hosts: localhost|127.0.0.1|[::1]|*.example.org
+# https:
+#   proxy_host: 123.45.678.9
+#   proxy_port: 80
+
 # sonarqube web interface, should be covered by reverse proxy
 web:
   host: 0.0.0.0
