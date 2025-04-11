@@ -76,7 +76,7 @@
 
   - name: 'Download SonarQube {{ sonar_version }} without check'
     get_url:
-      url: '{{ sonar_store }}/sonarqube-{{ sonar_version }}.zip'
+      url: '{{ sonar_store }}/sonarqube-{{sonar_edition}}-{{ sonar_version }}.zip'
       dest: '{{ sonar_download_path }}/'
       mode: 0644
       owner: '{{ sonar_user }}'
@@ -94,7 +94,7 @@
 
   - name: 'Install SonarQube {{ sonar_version }}'
     unarchive:
-      src: '{{ sonar_download_path }}/sonarqube-{{ sonar_version }}.zip'
+      src: '{{ sonar_download_path }}/sonarqube-{{sonar_edition}}--{{ sonar_version }}.zip'
       exclude: "{{ sonar_all_excluded_plugins }} + \
       [ 'sonarqube-{{ sonar_version }}/conf/sonar.properties', \
       'sonarqube-{{ sonar_version }}/temp/README.txt']"
